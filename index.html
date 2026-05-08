@@ -7,13 +7,9 @@
 
     <title>Darel AR</title>
 
-    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-
-    <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    <!-- FULLSCREEN + TRANSPARENT FIX -->
     <style>
         html,
         body {
@@ -27,17 +23,17 @@
 
         a-scene {
             position: fixed;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
+            top: 0;
+            left: 0;
             background: transparent !important;
         }
 
         canvas {
-            background: transparent !important;
             width: 100% !important;
             height: 100% !important;
+            background: transparent !important;
         }
 
         #startBtn {
@@ -62,21 +58,21 @@
 
     <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
-        renderer="alpha: true; colorManagement: true; physicallyCorrectLights: true; antialias: true" embedded>
+        renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true" embedded>
 
-        <!-- VIDEO -->
         <a-assets>
             <video id="video" src="./video.mp4" preload="auto" loop muted playsinline crossorigin="anonymous"></video>
         </a-assets>
 
-        <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- AR TARGET + STABILITY FIX -->
-        <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="10" smoothTolerance="0.01"
-            smoothThreshold="5">
+        <!-- STRONG STABILITY FIX -->
+        <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
+            smoothThreshold="2">
 
-            <a-plane id="plane" src="#video" position="0 0 0.01" material="shader: flat; transparent: true"></a-plane>
+            <!-- COVER MODE (FULL TARGET FILL) -->
+            <a-plane id="plane" src="#video" position="0 0 0.01" material="shader: flat; transparent: true"
+                scale="1 1 1"></a-plane>
 
         </a-entity>
 
@@ -91,25 +87,33 @@
         let unlocked = false;
         let playing = false;
 
-        // 1. unlock audio ONLY (NO autoplay video)
+        // unlock audio ONLY
         btn.addEventListener("click", () => {
             unlocked = true;
             video.muted = false;
             btn.style.display = "none";
         });
 
-        // 2. auto aspect ratio (FIX for all videos)
+        // COVER FIT (fill full target)
         video.addEventListener("loadedmetadata", () => {
-            const aspect = video.videoWidth / video.videoHeight;
+            const videoAspect = video.videoWidth / video.videoHeight;
 
-            const baseHeight = 1.0;
-            const baseWidth = baseHeight * aspect;
+            // target is assumed square-ish plane in MindAR → we normalize cover
+            const targetAspect = 1;
 
-            plane.setAttribute("width", baseWidth);
-            plane.setAttribute("height", baseHeight);
+            let scaleX = 1;
+            let scaleY = 1;
+
+            if (videoAspect > targetAspect) {
+                scaleY = videoAspect / targetAspect;
+            } else {
+                scaleX = targetAspect / videoAspect;
+            }
+
+            plane.setAttribute("scale", `${scaleX} ${scaleY} 1`);
         });
 
-        // 3. START ONLY ON AR DETECTION
+        // START ONLY ON AR DETECTION
         scene.addEventListener("targetFound", async () => {
             if (!unlocked) return;
 
@@ -120,7 +124,7 @@
             }
         });
 
-        // 4. STOP ON LOST TARGET
+        // STOP ON LOST
         scene.addEventListener("targetLost", () => {
             video.pause();
             playing = false;

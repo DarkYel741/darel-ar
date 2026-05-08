@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>AR Project</title>
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+    <!-- MindAR -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false" renderer="colorManagement: true" embedded>
+
+        <!-- Assets -->
+        <a-assets>
+            <video id="video" src="./video.mp4" preload="auto" loop muted playsinline crossorigin="anonymous"></video>
+        </a-assets>
+
+        <!-- Camera -->
+        <a-camera look-controls="enabled: false"></a-camera>
+
+        <!-- AR Target -->
+        <a-entity mindar-image-target="targetIndex: 0">
+            <a-video src="#video" width="1" height="0.6" position="0 0 0"></a-video>
+        </a-entity>
+
+    </a-scene>
+
+    <script>
+        const scene = document.querySelector("a-scene");
+        const video = document.querySelector("#video");
+
+        // когда нашли картинку
+        scene.addEventListener("targetFound", () => {
+            video.play();
+        });
+
+        // когда потеряли картинку
+        scene.addEventListener("targetLost", () => {
+            video.pause();
+        });
+    </script>
+
+</body>
+
+</html>

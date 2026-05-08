@@ -66,13 +66,13 @@
 
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- STRONG STABILITY FIX -->
+        <!-- STABLE TARGET -->
         <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
             smoothThreshold="2">
 
-            <!-- COVER MODE (FULL TARGET FILL) -->
-            <a-plane id="plane" src="#video" position="0 0 0.01" material="shader: flat; transparent: true"
-                scale="1 1 1"></a-plane>
+            <!-- FIXED PLANE (NO SCALE DISTORTION) -->
+            <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1"
+                material="shader: flat; transparent: true"></a-plane>
 
         </a-entity>
 
@@ -87,30 +87,32 @@
         let unlocked = false;
         let playing = false;
 
-        // unlock audio ONLY
+        // unlock audio
         btn.addEventListener("click", () => {
             unlocked = true;
             video.muted = false;
             btn.style.display = "none";
         });
 
-        // COVER FIT (fill full target)
+        // 🎯 COVER MODE (no distortion, full target fill)
         video.addEventListener("loadedmetadata", () => {
             const videoAspect = video.videoWidth / video.videoHeight;
 
-            // target is assumed square-ish plane in MindAR → we normalize cover
-            const targetAspect = 1;
+            const planeAspect = 1; // MindAR target is square
 
-            let scaleX = 1;
-            let scaleY = 1;
+            const mesh = plane.getObject3D("mesh");
+            const material = mesh.material;
 
-            if (videoAspect > targetAspect) {
-                scaleY = videoAspect / targetAspect;
+            // COVER LOGIC (like CSS object-fit: cover)
+            if (videoAspect > planeAspect) {
+                material.map.repeat.set(planeAspect / videoAspect, 1);
+                material.map.offset.set((1 - planeAspect / videoAspect) / 2, 0);
             } else {
-                scaleX = targetAspect / videoAspect;
+                material.map.repeat.set(1, videoAspect / planeAspect);
+                material.map.offset.set(0, (1 - videoAspect / planeAspect) / 2);
             }
 
-            plane.setAttribute("scale", `${scaleX} ${scaleY} 1`);
+            material.map.needsUpdate = true;
         });
 
         // START ONLY ON AR DETECTION

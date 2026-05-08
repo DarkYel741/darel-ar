@@ -13,7 +13,7 @@
     <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    <!-- FULLSCREEN FIX -->
+    <!-- FIXED FULLSCREEN + CAMERA -->
     <style>
         html,
         body {
@@ -26,15 +26,16 @@
         }
 
         a-scene {
-            width: 100%;
-            height: 100%;
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
         }
 
-        video {
-            display: none;
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
         }
     </style>
 </head>
@@ -45,7 +46,7 @@
         device-orientation-permission-ui="enabled: false"
         renderer="colorManagement: true, physicallyCorrectLights: true" embedded>
 
-        <!-- VIDEO ASSET -->
+        <!-- ASSETS -->
         <a-assets>
             <video id="video" src="./video.mp4" preload="auto" loop muted playsinline crossorigin="anonymous"></video>
         </a-assets>
@@ -66,12 +67,12 @@
         const scene = document.querySelector("a-scene");
         const video = document.querySelector("#video");
 
-        // Когда нашли изображение
+        // когда нашли картинку
         scene.addEventListener("targetFound", () => {
             video.play();
         });
 
-        // Когда потеряли изображение
+        // когда потеряли картинку
         scene.addEventListener("targetLost", () => {
             video.pause();
         });

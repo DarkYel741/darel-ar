@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Darel AR</title>
+    <title>Darel AR - Optimized</title>
 
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -19,7 +18,6 @@
             height: 100%;
             overflow: hidden;
             background: transparent;
-            /* ❗ no black screen */
         }
 
         a-scene {
@@ -28,17 +26,12 @@
             height: 100%;
             top: 0;
             left: 0;
-            background: transparent !important;
-        }
-
-        canvas {
-            width: 100% !important;
-            height: 100% !important;
-            background: transparent !important;
         }
 
         #startBtn {
             position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.85);
@@ -46,51 +39,48 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             font-size: 20px;
             z-index: 9999;
+            cursor: pointer;
         }
     </style>
 </head>
 
 <body>
 
-    <div id="startBtn">Tap to Enable Sound</div>
+    <div id="startBtn">Нажмите, чтобы включить звук</div>
 
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false"
-        renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true" embedded>
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001;"
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
+        renderer="alpha: true; antialias: true; colorManagement: true; precision: mediump" embedded>
 
-        <!-- VIDEO -->
         <a-assets>
-            <video id="video" src="./video.mp4" preload="auto" loop muted playsinline crossorigin="anonymous"></video>
+            <video id="video" src="./video.mp4" preload="auto" loop muted playsinline webkit-playsinline
+                crossorigin="anonymous"></video>
         </a-assets>
 
-        <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- AR TARGET -->
-        <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
-            smoothThreshold="2">
+        <a-entity id="target" mindar-image-target="targetIndex: 0" smooth="true" smoothCount="12" smoothTolerance="0.01"
+            smoothThreshold="5">
 
-            <!-- SIMPLE PLANE -->
-            <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1" scale="1 1 1"
-                material="shader: flat; transparent: true"></a-plane>
+            <a-plane id="plane" src="#video" position="0 0 0.02" width="1" height="1"
+                material="shader: flat; transparent: true; side: double"></a-plane>
 
         </a-entity>
 
     </a-scene>
 
     <script>
-        const scene = document.querySelector("a-scene");
         const video = document.querySelector("#video");
         const plane = document.querySelector("#plane");
         const btn = document.querySelector("#startBtn");
+        const scene = document.querySelector("a-scene");
 
         let unlocked = false;
-        let playing = false;
 
-        // 🔊 unlock audio
+        // Разблокировка звука
         btn.addEventListener("click", () => {
             unlocked = true;
             video.muted = false;
@@ -98,54 +88,41 @@
             btn.style.display = "none";
         });
 
-        // 🎯 PURE FIT (NO DISTORTION)
-        video.addEventListener("loadedmetadata", () => {
+        // Идеальная подгонка видео под размеры вашего таргета (453x683)
+        const adjustSize = () => {
+            if (!video.videoWidth) return;
+
             const videoAspect = video.videoWidth / video.videoHeight;
+            const targetAspect = 453 / 683; // Пропорции из вашего .mind файла
 
-            const targetAspect = 1; // MindAR target is square
+            let scaleX, scaleY;
 
-            let scaleX = 1;
-            let scaleY = 1;
-
+            // Логика "Cover" (Заполнение без пустот)
             if (videoAspect > targetAspect) {
-                // wide video → fit width
-                scaleX = 1;
-                scaleY = targetAspect / videoAspect;
-            } else {
-                // tall video → fit height
+                // Видео шире, чем нужно — подгоняем по высоте
                 scaleX = videoAspect / targetAspect;
                 scaleY = 1;
+            } else {
+                // Видео уже, чем нужно — подгоняем по ширине
+                scaleX = 1;
+                scaleY = targetAspect / videoAspect;
             }
 
-            // ✔ apply uniform scaling (no stretching)
             plane.setAttribute("scale", `${scaleX} ${scaleY} 1`);
+        };
 
-            // ✔ center fix
-            plane.setAttribute("position", "0 0 0.01");
-        });
+        video.addEventListener("loadedmetadata", adjustSize);
+        if (video.readyState >= 1) adjustSize();
 
-        // ▶ start video + audio sync
-        scene.addEventListener("targetFound", async () => {
-            if (!unlocked) return;
-
-            if (!playing) {
-                video.currentTime = 0;
-                video.muted = false;
-                video.volume = 1.0;
-
-                try {
-                    await video.play();
-                    playing = true;
-                } catch (e) {
-                    console.log("play error:", e);
-                }
+        // Управление воспроизведением
+        scene.addEventListener("targetFound", () => {
+            if (unlocked) {
+                video.play().catch(e => console.log("Ошибка воспроизведения:", e));
             }
         });
 
-        // ⛔ stop
         scene.addEventListener("targetLost", () => {
             video.pause();
-            playing = false;
         });
     </script>
 

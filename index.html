@@ -61,7 +61,7 @@
         device-orientation-permission-ui="enabled: false"
         renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true" embedded>
 
-        <!-- VIDEO ASSET -->
+        <!-- VIDEO -->
         <a-assets>
             <video id="video" src="./video.mp4" preload="auto" loop muted playsinline crossorigin="anonymous"></video>
         </a-assets>
@@ -69,11 +69,11 @@
         <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- AR TARGET -->
+        <!-- AR TARGET (STABLE) -->
         <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
             smoothThreshold="2">
 
-            <!-- FIXED PLANE -->
+            <!-- CENTERED PLANE -->
             <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1"
                 material="shader: flat; transparent: true"></a-plane>
 
@@ -98,15 +98,18 @@
             btn.style.display = "none";
         });
 
-        // 📐 FIT HEIGHT MODE (no distortion)
+        // 📐 FIT HEIGHT + CENTER FIX
         video.addEventListener("loadedmetadata", () => {
             const aspect = video.videoWidth / video.videoHeight;
 
-            const height = 1;      // target height fixed
-            const width = aspect;  // width depends on video ratio
+            const height = 1;   // fixed to target height
+            const width = aspect;
 
             plane.setAttribute("width", width);
             plane.setAttribute("height", height);
+
+            // 🧠 FIX: center correction (important for "stuck to bottom" bug)
+            plane.setAttribute("position", "0 0 0.01");
         });
 
         // 🎯 START VIDEO + SOUND TOGETHER
@@ -115,7 +118,6 @@
 
             if (!playing) {
                 video.currentTime = 0;
-
                 video.muted = false;
                 video.volume = 1.0;
 

@@ -19,6 +19,7 @@
             height: 100%;
             overflow: hidden;
             background: transparent;
+            /* ❗ NO BLACK SCREEN */
         }
 
         a-scene {
@@ -60,17 +61,19 @@
         device-orientation-permission-ui="enabled: false"
         renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true" embedded>
 
+        <!-- VIDEO ASSET -->
         <a-assets>
             <video id="video" src="./video.mp4" preload="auto" loop muted playsinline crossorigin="anonymous"></video>
         </a-assets>
 
+        <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- STABLE TARGET -->
+        <!-- AR TARGET -->
         <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
             smoothThreshold="2">
 
-            <!-- FIXED PLANE (NO SCALE DISTORTION) -->
+            <!-- FIXED PLANE -->
             <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1"
                 material="shader: flat; transparent: true"></a-plane>
 
@@ -87,46 +90,45 @@
         let unlocked = false;
         let playing = false;
 
-        // unlock audio
+        // 🔊 unlock audio (required by browser)
         btn.addEventListener("click", () => {
             unlocked = true;
             video.muted = false;
+            video.volume = 1.0;
             btn.style.display = "none";
         });
 
-        // 🎯 COVER MODE (no distortion, full target fill)
+        // 📐 FIT HEIGHT MODE (no distortion)
         video.addEventListener("loadedmetadata", () => {
-            const videoAspect = video.videoWidth / video.videoHeight;
+            const aspect = video.videoWidth / video.videoHeight;
 
-            const planeAspect = 1; // MindAR target is square
+            const height = 1;      // target height fixed
+            const width = aspect;  // width depends on video ratio
 
-            const mesh = plane.getObject3D("mesh");
-            const material = mesh.material;
-
-            // COVER LOGIC (like CSS object-fit: cover)
-            if (videoAspect > planeAspect) {
-                material.map.repeat.set(planeAspect / videoAspect, 1);
-                material.map.offset.set((1 - planeAspect / videoAspect) / 2, 0);
-            } else {
-                material.map.repeat.set(1, videoAspect / planeAspect);
-                material.map.offset.set(0, (1 - videoAspect / planeAspect) / 2);
-            }
-
-            material.map.needsUpdate = true;
+            plane.setAttribute("width", width);
+            plane.setAttribute("height", height);
         });
 
-        // START ONLY ON AR DETECTION
+        // 🎯 START VIDEO + SOUND TOGETHER
         scene.addEventListener("targetFound", async () => {
             if (!unlocked) return;
 
             if (!playing) {
                 video.currentTime = 0;
-                await video.play();
-                playing = true;
+
+                video.muted = false;
+                video.volume = 1.0;
+
+                try {
+                    await video.play();
+                    playing = true;
+                } catch (e) {
+                    console.log("play error:", e);
+                }
             }
         });
 
-        // STOP ON LOST
+        // ⛔ STOP ON LOST
         scene.addEventListener("targetLost", () => {
             video.pause();
             playing = false;

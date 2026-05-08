@@ -69,11 +69,12 @@
         <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- TARGET -->
+        <!-- AR TARGET -->
         <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
             smoothThreshold="2">
 
-            <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1"
+            <!-- SIMPLE PLANE -->
+            <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1" scale="1 1 1"
                 material="shader: flat; transparent: true"></a-plane>
 
         </a-entity>
@@ -97,36 +98,33 @@
             btn.style.display = "none";
         });
 
-        // 🎯 FIX: correct cover behavior (NO distortion + centered)
+        // 🎯 PURE FIT (NO DISTORTION)
         video.addEventListener("loadedmetadata", () => {
-            const aspect = video.videoWidth / video.videoHeight;
+            const videoAspect = video.videoWidth / video.videoHeight;
 
-            const mesh = plane.getObject3D("mesh");
-            const material = mesh.material;
+            const targetAspect = 1; // MindAR target is square
 
-            const map = material.map;
+            let scaleX = 1;
+            let scaleY = 1;
 
-            if (!map) return;
-
-            // reset
-            map.repeat.set(1, 1);
-            map.offset.set(0, 0);
-
-            // 📐 cover logic (crop instead of stretch)
-            if (aspect > 1) {
-                // horizontal → crop sides
-                map.repeat.set(1 / aspect, 1);
-                map.offset.set((1 - 1 / aspect) / 2, 0);
+            if (videoAspect > targetAspect) {
+                // wide video → fit width
+                scaleX = 1;
+                scaleY = targetAspect / videoAspect;
             } else {
-                // vertical → crop top/bottom
-                map.repeat.set(1, aspect);
-                map.offset.set(0, (1 - aspect) / 2);
+                // tall video → fit height
+                scaleX = videoAspect / targetAspect;
+                scaleY = 1;
             }
 
-            map.needsUpdate = true;
+            // ✔ apply uniform scaling (no stretching)
+            plane.setAttribute("scale", `${scaleX} ${scaleY} 1`);
+
+            // ✔ center fix
+            plane.setAttribute("position", "0 0 0.01");
         });
 
-        // ▶ start sync audio + video
+        // ▶ start video + audio sync
         scene.addEventListener("targetFound", async () => {
             if (!unlocked) return;
 

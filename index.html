@@ -19,7 +19,7 @@
             height: 100%;
             overflow: hidden;
             background: transparent;
-            /* ❗ NO BLACK SCREEN */
+            /* ❗ no black screen */
         }
 
         a-scene {
@@ -69,11 +69,10 @@
         <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- AR TARGET (STABLE) -->
+        <!-- TARGET -->
         <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005"
             smoothThreshold="2">
 
-            <!-- CENTERED PLANE -->
             <a-plane id="plane" src="#video" position="0 0 0.01" width="1" height="1"
                 material="shader: flat; transparent: true"></a-plane>
 
@@ -90,7 +89,7 @@
         let unlocked = false;
         let playing = false;
 
-        // 🔊 unlock audio (required by browser)
+        // 🔊 unlock audio
         btn.addEventListener("click", () => {
             unlocked = true;
             video.muted = false;
@@ -98,21 +97,36 @@
             btn.style.display = "none";
         });
 
-        // 📐 FIT HEIGHT + CENTER FIX
+        // 🎯 FIX: correct cover behavior (NO distortion + centered)
         video.addEventListener("loadedmetadata", () => {
             const aspect = video.videoWidth / video.videoHeight;
 
-            const height = 1;   // fixed to target height
-            const width = aspect;
+            const mesh = plane.getObject3D("mesh");
+            const material = mesh.material;
 
-            plane.setAttribute("width", width);
-            plane.setAttribute("height", height);
+            const map = material.map;
 
-            // 🧠 FIX: center correction (important for "stuck to bottom" bug)
-            plane.setAttribute("position", "0 0 0.01");
+            if (!map) return;
+
+            // reset
+            map.repeat.set(1, 1);
+            map.offset.set(0, 0);
+
+            // 📐 cover logic (crop instead of stretch)
+            if (aspect > 1) {
+                // horizontal → crop sides
+                map.repeat.set(1 / aspect, 1);
+                map.offset.set((1 - 1 / aspect) / 2, 0);
+            } else {
+                // vertical → crop top/bottom
+                map.repeat.set(1, aspect);
+                map.offset.set(0, (1 - aspect) / 2);
+            }
+
+            map.needsUpdate = true;
         });
 
-        // 🎯 START VIDEO + SOUND TOGETHER
+        // ▶ start sync audio + video
         scene.addEventListener("targetFound", async () => {
             if (!unlocked) return;
 
@@ -130,7 +144,7 @@
             }
         });
 
-        // ⛔ STOP ON LOST
+        // ⛔ stop
         scene.addEventListener("targetLost", () => {
             video.pause();
             playing = false;

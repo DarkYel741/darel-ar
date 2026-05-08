@@ -13,7 +13,7 @@
     <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    <!-- FULLSCREEN + CLEAN BACKGROUND FIX -->
+    <!-- FULLSCREEN FIX -->
     <style>
         html,
         body {
@@ -22,7 +22,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: transparent;
+            background: black;
         }
 
         a-scene {
@@ -31,7 +31,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: transparent !important;
         }
 
         canvas {
@@ -59,8 +58,8 @@
 
 <body>
 
-    <!-- TAP TO START (audio unlock) -->
-    <div id="startBtn">Tap to Start AR</div>
+    <!-- TAP ONLY FOR AUDIO UNLOCK -->
+    <div id="startBtn">Tap to Enable AR Sound</div>
 
     <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
@@ -74,10 +73,10 @@
         <!-- CAMERA -->
         <a-camera look-controls="enabled: false"></a-camera>
 
-        <!-- TARGET -->
+        <!-- AR TARGET -->
         <a-entity mindar-image-target="targetIndex: 0">
 
-            <a-video src="#video" position="0 0 0" scale="1 1 1"></a-video>
+            <a-video src="#video" position="0 0 0" scale="2 2 2"></a-video>
 
         </a-entity>
 
@@ -88,20 +87,31 @@
         const video = document.querySelector("#video");
         const btn = document.querySelector("#startBtn");
 
-        // unlock audio/video on user tap
-        btn.addEventListener("click", async () => {
+        let unlocked = false;
+        let isPlaying = false;
+
+        // 1. только unlock звука (НЕ запуск видео)
+        btn.addEventListener("click", () => {
+            unlocked = true;
             video.muted = false;
-            await video.play();
             btn.style.display = "none";
         });
 
-        // AR events
-        scene.addEventListener("targetFound", () => {
-            video.play();
+        // 2. СТАРТ ТОЛЬКО при распознавании AR
+        scene.addEventListener("targetFound", async () => {
+            if (!unlocked) return;
+
+            if (!isPlaying) {
+                video.currentTime = 0;
+                await video.play();
+                isPlaying = true;
+            }
         });
 
+        // 3. Пауза при потере
         scene.addEventListener("targetLost", () => {
             video.pause();
+            isPlaying = false;
         });
     </script>
 
